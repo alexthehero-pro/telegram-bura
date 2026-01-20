@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bura Game</title>
+  <title>Bura Game v2</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body { background:#121212; color:white; font-family:Arial; margin:0; padding:16px; }
@@ -55,6 +55,7 @@
       const u = tg.initDataUnsafe?.user;
       document.getElementById("hello").textContent = u ? `Привет, ${u.first_name}! 👋` : "Привет! 👋";
     } else {
+<div class="small">BUILD: v2</div>
       document.getElementById("hello").textContent = "Открыто не из Telegram (это ок).";
     }
   }
