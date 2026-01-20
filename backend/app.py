@@ -1,6 +1,6 @@
 import json
 import os
-from pathlib import Path
+from fastapi.staticfiles import StaticFiles
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
@@ -12,6 +12,9 @@ from tg_auth import verify_init_data
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
 app = FastAPI()
+WEB_DIR = Path(__file__).with_name("web")
+app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")
+INDEX_PATH = WEB_DIR / "index.html"
 
 # Для разработки ok (позже можно ограничить)
 app.add_middleware(
