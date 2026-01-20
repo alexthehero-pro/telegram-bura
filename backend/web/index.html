@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bura Game</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body { background:#121212; color:white; font-family:Arial; margin:0; padding:16px; }
+    .card { background:#1e1e1e; padding:12px; border-radius:12px; margin-bottom:12px; }
+    .row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+    button { padding:12px 16px; font-size:16px; border:0; border-radius:10px; }
+    .btn { background:#00aaff; color:white; }
+    .small { opacity:.8; font-size:14px; }
+    .hand button { min-width:70px; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div id="hello">Загрузка...</div>
+    <div class="small" id="info"></div>
+  </div>
+
+  <div class="card">
+    <div><b>Твой ход</b></div>
+    <div class="row hand" id="hand"></div>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn" onclick="newRound()">🔄 Новый раунд</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div><b>Стол</b></div>
+    <div class="row">
+      <div>Ты: <span id="myCard">—</span></div>
+      <div>Бот: <span id="botCard">—</span></div>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <div>Счёт: <span id="score">0 : 0</span></div>
+      <div>Козырь: <span id="trump">—</span></div>
+    </div>
+  </div>
+
+<script>
+  const tg = window.Telegram?.WebApp;
+
+  if (tg) {
+    tg.expand();
+    const u = tg.initDataUnsafe?.user;
+    document.getElementById("hello").textContent =
+      u ? `Привет, ${u.first_name}! 👋` : "Привет! 👋";
+    document.getElementById("info").textContent =
+      u ? `id: ${u.id} | coins: ...` : "Открыто не из Telegram (это ок для теста).";
+  } else {
+    document.getElementById("hello").textContent = "Открыто не из Telegram (это ок).";
+    document.getElementById("info").textContent = "";
+  }
+
+  const API_BASE = "";
+
+  async function apiMe() {
+    try {
+      const initData = tg?.initData || "";
+      const res = await fetch(`${API_BASE}/api/me`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ initData })
+      });
+
+      const data = await res.json();
+      console.log("ME:", data);
+
+      if (data.ok) {
+        // обновим строку info и покажем монеты
+        const info = document.getElementById("info");
+        info.textContent = `id: ${data.user.tg_id} | coins: ${data.user.coins}`;
+      } else {
+        document.getElementById("info").textContent = "API error: " + JSON.stringify(data);
+      }
+    } catch (e) {
+      document.getElementById("info").textContent = "Ошибка запроса к API: " + e;
+    }
+  }
+
+  apiMe();
+</script>
+
+  // --- Мини-логика (пока упрощённо) ---
+  const suits = ["♠","♥","♦","♣"];
+  const ranks = ["6","7","8","9","10","J","Q","K","A"]; // классическая "бура" 36 карт
+  const rankPower = Object.fromEntries(ranks.map((r,i)=>[r,i])); // 6 слабая, A сильная
+
+  let hand = [];
+  let trumpSuit = null;
+  let myScore = 0;
+  let botScore = 0;
+
+  function randomCard() {
+    const r = ranks[Math.floor(Math.random()*ranks.length)];
+    const s = suits[Math.floor(Math.random()*suits.length)];
+    return {r, s};
+  }
+
+  function cardToText(c){ return `${c.r}${c.s}`; }
+
+  function newRound() {
+    myScore = 0; botScore = 0;
+    trumpSuit = suits[Math.floor(Math.random()*suits.length)];
+    document.getElementById("trump").textContent = trumpSuit;
+    hand = [randomCard(), randomCard(), randomCard()];
+    renderHand();
+    clearTable();
+    renderScore();
+  }
+
+  function renderHand() {
+    const el = document.getElementById("hand");
+    el.innerHTML = "";
+    hand.forEach((c, idx) => {
+      const b = document.createElement("button");
+      b.className = "btn";
+      b.textContent = cardToText(c);
+      b.onclick = () => playCard(idx);
+      el.appendChild(b);
+    });
+  }
+
+  function clearTable() {
+    document.getElementById("myCard").textContent = "—";
+    document.getElementById("botCard").textContent = "—";
+  }
+
+  function renderScore() {
+    document.getElementById("score").textContent = `${myScore} : ${botScore}`;
+  }
+
+  function compareCards(my, bot) {
+    // Упрощённо:
+    // 1) козырь бьёт не-козырь
+    // 2) если одинаковая масть — старше по рангу
+    const myTrump = my.s === trumpSuit;
+    const botTrump = bot.s === trumpSuit;
+
+    if (myTrump && !botTrump) return 1;
+    if (!myTrump && botTrump) return -1;
+
+    if (my.s === bot.s) {
+      if (rankPower[my.r] > rankPower[bot.r]) return 1;
+      if (rankPower[my.r] < rankPower[bot.r]) return -1;
+      return 0;
+    }
+
+    // разная масть и оба (не)козырь → пусть выигрывает тот, кто ходил (ты)
+    return 1;
+  }
+
+  function playCard(idx) {
+    const my = hand.splice(idx,1)[0];
+    const bot = randomCard();
+
+    document.getElementById("myCard").textContent = cardToText(my);
+    document.getElementById("botCard").textContent = cardToText(bot);
+
+    const res = compareCards(my, bot);
+    if (res >= 0) myScore += 1; else botScore += 1;
+
+    renderScore();
+    renderHand();
+
+    // если карты кончились — автоновый раунд (позже сделаем “партию”)
+    if (hand.length === 0) {
+      setTimeout(() => {
+        alert(myScore > botScore ? "Ты выиграл раунд! 🏆" : "Бот выиграл раунд 🤖");
+        newRound();
+      }, 150);
+    }
+  }
+
+  newRound();
+</script>
+</body>
+</html>
+
