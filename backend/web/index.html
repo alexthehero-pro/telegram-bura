@@ -11,7 +11,7 @@
     .row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
     button { padding:12px 16px; font-size:16px; border:0; border-radius:10px; }
     .btn { background:#00aaff; color:white; }
-    .small { opacity:.8; font-size:14px; }
+    .small { opacity:.85; font-size:14px; word-break:break-word; }
     .hand button { min-width:70px; }
   </style>
 </head>
@@ -26,7 +26,8 @@
     <div><b>Твой ход</b></div>
     <div class="row hand" id="hand"></div>
     <div class="row" style="margin-top:10px;">
-      <button class="btn" onclick="newRound()">🔄 Новый раунд</button>
+      <button class="btn" id="newRoundBtn">🔄 Новый раунд</button>
+      <button class="btn" id="rewardBtn">🪙 Тест: +10 монет</button>
     </div>
   </div>
 
@@ -44,20 +45,22 @@
 
 <script>
   const tg = window.Telegram?.WebApp;
+  if (tg) tg.expand();
 
-  if (tg) {
-    tg.expand();
-    const u = tg.initDataUnsafe?.user;
-    document.getElementById("hello").textContent =
-      u ? `Привет, ${u.first_name}! 👋` : "Привет! 👋";
-    document.getElementById("info").textContent =
-      u ? `id: ${u.id} | coins: ...` : "Открыто не из Telegram (это ок для теста).";
-  } else {
-    document.getElementById("hello").textContent = "Открыто не из Telegram (это ок).";
-    document.getElementById("info").textContent = "";
-  }
-
+  // Мы на Render, поэтому API на том же домене:
   const API_BASE = "";
+
+  function setHello() {
+    if (tg) {
+      const u = tg.initDataUnsafe?.user;
+      document.getElementById("hello").textContent = u ? `Привет, ${u.first_name}! 👋` : "Привет! 👋";
+    } else {
+      document.getElementById("hello").textContent = "Открыто не из Telegram (это ок).";
+    }
+  }
+  function setInfo(text) {
+    document.getElementById("info").textContent = text;
+  }
 
   async function apiMe() {
     try {
@@ -67,29 +70,38 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ initData })
       });
-
       const data = await res.json();
-      console.log("ME:", data);
-
-      if (data.ok) {
-        // обновим строку info и покажем монеты
-        const info = document.getElementById("info");
-        info.textContent = `id: ${data.user.tg_id} | coins: ${data.user.coins}`;
-      } else {
-        document.getElementById("info").textContent = "API error: " + JSON.stringify(data);
-      }
+      if (data.ok) setInfo(`id: ${data.user.tg_id} | coins: ${data.user.coins}`);
+      else setInfo("API error: " + JSON.stringify(data));
     } catch (e) {
-      document.getElementById("info").textContent = "Ошибка запроса к API: " + e;
+      setInfo("Ошибка запроса к API: " + e);
     }
   }
 
-  apiMe();
-</script>
+  async function rewardWin() {
+    try {
+      const initData = tg?.initData || "";
+      const res = await fetch(`${API_BASE}/api/reward`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ initData })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setInfo(`id: ${tg?.initDataUnsafe?.user?.id || "?"} | coins: ${data.coins}`);
+        alert(`Начислено +${data.added} монет 🪙`);
+      } else {
+        alert("API error: " + JSON.stringify(data));
+      }
+    } catch (e) {
+      alert("Ошибка награды: " + e);
+    }
+  }
 
-  // --- Мини-логика (пока упрощённо) ---
+  // --- Мини-логика игры (упрощённо) ---
   const suits = ["♠","♥","♦","♣"];
-  const ranks = ["6","7","8","9","10","J","Q","K","A"]; // классическая "бура" 36 карт
-  const rankPower = Object.fromEntries(ranks.map((r,i)=>[r,i])); // 6 слабая, A сильная
+  const ranks = ["6","7","8","9","10","J","Q","K","A"];
+  const rankPower = Object.fromEntries(ranks.map((r,i)=>[r,i]));
 
   let hand = [];
   let trumpSuit = null;
@@ -101,8 +113,26 @@
     const s = suits[Math.floor(Math.random()*suits.length)];
     return {r, s};
   }
-
   function cardToText(c){ return `${c.r}${c.s}`; }
+
+  function clearTable() {
+    document.getElementById("myCard").textContent = "—";
+    document.getElementById("botCard").textContent = "—";
+  }
+  function renderScore() {
+    document.getElementById("score").textContent = `${myScore} : ${botScore}`;
+  }
+  function renderHand() {
+    const el = document.getElementById("hand");
+    el.innerHTML = "";
+    hand.forEach((c, idx) => {
+      const b = document.createElement("button");
+      b.className = "btn";
+      b.textContent = cardToText(c);
+      b.addEventListener("click", () => playCard(idx));
+      el.appendChild(b);
+    });
+  }
 
   function newRound() {
     myScore = 0; botScore = 0;
@@ -114,31 +144,7 @@
     renderScore();
   }
 
-  function renderHand() {
-    const el = document.getElementById("hand");
-    el.innerHTML = "";
-    hand.forEach((c, idx) => {
-      const b = document.createElement("button");
-      b.className = "btn";
-      b.textContent = cardToText(c);
-      b.onclick = () => playCard(idx);
-      el.appendChild(b);
-    });
-  }
-
-  function clearTable() {
-    document.getElementById("myCard").textContent = "—";
-    document.getElementById("botCard").textContent = "—";
-  }
-
-  function renderScore() {
-    document.getElementById("score").textContent = `${myScore} : ${botScore}`;
-  }
-
   function compareCards(my, bot) {
-    // Упрощённо:
-    // 1) козырь бьёт не-козырь
-    // 2) если одинаковая масть — старше по рангу
     const myTrump = my.s === trumpSuit;
     const botTrump = bot.s === trumpSuit;
 
@@ -150,8 +156,6 @@
       if (rankPower[my.r] < rankPower[bot.r]) return -1;
       return 0;
     }
-
-    // разная масть и оба (не)козырь → пусть выигрывает тот, кто ходил (ты)
     return 1;
   }
 
@@ -168,7 +172,6 @@
     renderScore();
     renderHand();
 
-    // если карты кончились — автоновый раунд (позже сделаем “партию”)
     if (hand.length === 0) {
       setTimeout(() => {
         alert(myScore > botScore ? "Ты выиграл раунд! 🏆" : "Бот выиграл раунд 🤖");
@@ -177,8 +180,16 @@
     }
   }
 
+  // Кнопки
+  document.getElementById("newRoundBtn").addEventListener("click", newRound);
+  document.getElementById("rewardBtn").addEventListener("click", rewardWin);
+
+  // Старт
+  setHello();
+  apiMe();
   newRound();
 </script>
+
 </body>
 </html>
 
