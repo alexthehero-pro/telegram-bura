@@ -55,7 +55,8 @@
       const u = tg.initDataUnsafe?.user;
       document.getElementById("hello").textContent = u ? `Привет, ${u.first_name}! 👋` : "Привет! 👋";
     } else {
-<div class="small">BUILD: v2</div>
+<div class="small" id="info"></div>
+<div class="small">BUILD: v3</div>
       document.getElementById("hello").textContent = "Открыто не из Telegram (это ок).";
     }
   }
