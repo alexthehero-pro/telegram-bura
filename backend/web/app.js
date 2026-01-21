@@ -32,22 +32,26 @@ async function apiMe() {
   }
 }
 
-async function rewardWin(amount = 10) {
+async function rewardWin(amount = 5) {
   try {
     const initData = tg?.initData || "";
-    const res = await fetch(`${API_BASE}/api/reward`, {
+    if (!initData) return null;
+
+    const res = await fetch(`/api/reward`, {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ initData, amount })
     });
     const data = await res.json();
-    if (data.ok) {
-      setInfo(`id: ${tg?.initDataUnsafe?.user?.id || "?"} | coins: ${data.coins}`);
-      return data;
-    } else {
-      alert("API error: " + JSON.stringify(data));
-      return null;
-    }
+    if (data.ok) return data;
+
+    console.log("reward error", data);
+    return null;
+  } catch (e) {
+    console.log("reward exception", e);
+    return null;
+  }
+}
   } catch (e) {
     alert("Ошибка награды: " + e);
     return null;
@@ -131,7 +135,21 @@ function playCard(idx) {
 if (hand.length === 0) {
   setTimeout(async () => {
     const win = myScore > botScore;
-    alert(win ? "Ты выиграл раунд! 🏆" : "Бот выиграл раунд 🤖");
+    alert(win ? "Ты выиграл раунд! 🏆 (+5 монет)" : "Бот выиграл раунд 🤖");
+
+    if (win) {
+      const r = await rewardWin(5);
+      if (r?.ok) {
+        setInfo(`id: ${tg?.initDataUnsafe?.user?.id || "?"} | coins: ${r.coins}`);
+      } else {
+        // если вдруг не получилось — просто обновим через /api/me
+        await apiMe();
+      }
+    }
+
+    newRound();
+  }, 150);
+}
 
     if (win) {
       await rewardWin(5); // +5 монет за победу
