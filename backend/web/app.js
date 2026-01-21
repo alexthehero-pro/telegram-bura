@@ -43,12 +43,14 @@ async function rewardWin(amount = 10) {
     const data = await res.json();
     if (data.ok) {
       setInfo(`id: ${tg?.initDataUnsafe?.user?.id || "?"} | coins: ${data.coins}`);
-      alert(`Начислено +${data.added} монет 🪙`);
+      return data;
     } else {
       alert("API error: " + JSON.stringify(data));
+      return null;
     }
   } catch (e) {
     alert("Ошибка награды: " + e);
+    return null;
   }
 }
 
@@ -132,8 +134,8 @@ if (hand.length === 0) {
     alert(win ? "Ты выиграл раунд! 🏆" : "Бот выиграл раунд 🤖");
 
     if (win) {
-      await rewardWin(5); // награда 5 монет за победу
-      await apiMe();      // обновим coins в шапке
+      await rewardWin(5); // +5 монет за победу
+      await apiMe();      // обновим шапку
     }
 
     newRound();
@@ -143,7 +145,6 @@ if (hand.length === 0) {
 
 // Навешиваем кнопки и стартуем
 document.getElementById("newRoundBtn").addEventListener("click", newRound);
-document.getElementById("rewardBtn").addEventListener("click", rewardWin);
 
 setHello();
 apiMe();
