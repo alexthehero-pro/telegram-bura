@@ -147,6 +147,13 @@ if (hand.length === 0) {
 document.getElementById("newRoundBtn").addEventListener("click", newRound);
 
 setHello();
-apiMe();
+
+const initData = tg?.initData || "";
+if (!initData) {
+  setInfo("Открой игру из Telegram (через бота), тогда появятся coins 🪙");
+} else {
+  apiMe();
+}
+
 newRound();
 
