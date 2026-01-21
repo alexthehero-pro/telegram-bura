@@ -74,7 +74,18 @@ def reward(payload: dict):
     user = _get_tg_user(init_data)
 
     tg_id = int(user["id"])
-    added = 10
-    coins = add_coins(tg_id, added)
-    return {"ok": True, "added": added, "coins": coins}
+
+    # сколько начислять (ограничим, чтобы нельзя было накрутить)
+    try:
+        amount = int(payload.get("amount", 10))
+    except Exception:
+        amount = 10
+
+    if amount < 1:
+        amount = 1
+    if amount > 20:
+        amount = 20
+
+    coins = add_coins(tg_id, amount)
+    return {"ok": True, "added": amount, "coins": coins}
 

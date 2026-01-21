@@ -32,13 +32,13 @@ async function apiMe() {
   }
 }
 
-async function rewardWin() {
+async function rewardWin(amount = 10) {
   try {
     const initData = tg?.initData || "";
     const res = await fetch(`${API_BASE}/api/reward`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ initData })
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ initData, amount })
     });
     const data = await res.json();
     if (data.ok) {
@@ -126,12 +126,19 @@ function playCard(idx) {
   renderScore();
   renderHand();
 
-  if (hand.length === 0) {
-    setTimeout(() => {
-      alert(myScore > botScore ? "Ты выиграл раунд! 🏆" : "Бот выиграл раунд 🤖");
-      newRound();
-    }, 150);
-  }
+if (hand.length === 0) {
+  setTimeout(async () => {
+    const win = myScore > botScore;
+    alert(win ? "Ты выиграл раунд! 🏆" : "Бот выиграл раунд 🤖");
+
+    if (win) {
+      await rewardWin(5); // награда 5 монет за победу
+      await apiMe();      // обновим coins в шапке
+    }
+
+    newRound();
+  }, 150);
+}
 }
 
 // Навешиваем кнопки и стартуем
