@@ -1,10 +1,11 @@
 import json
 import os
-from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from db import init_db, upsert_user, get_user, add_coins
 from tg_auth import verify_init_data
@@ -12,11 +13,7 @@ from tg_auth import verify_init_data
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
 app = FastAPI()
-WEB_DIR = Path(__file__).with_name("web")
-app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")
-INDEX_PATH = WEB_DIR / "index.html"
 
-# Для разработки ok (позже можно ограничить)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,11 +25,14 @@ app.add_middleware(
 WEB_DIR = Path(__file__).with_name("web")
 INDEX_PATH = WEB_DIR / "index.html"
 
+# отдаём /static/app.js
+app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")
+
 @app.on_event("startup")
 def _startup():
     init_db()
     if not BOT_TOKEN:
-        print("WARNING: BOT_TOKEN env is empty. Set it before running backend!")
+        print("WARNING: BOT_TOKEN env is empty. Set it on Render (Environment Variables).")
 
 @app.get("/", response_class=HTMLResponse)
 def index():
