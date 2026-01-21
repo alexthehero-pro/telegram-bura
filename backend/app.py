@@ -89,3 +89,7 @@ def reward(payload: dict):
     coins = add_coins(tg_id, amount)
     return {"ok": True, "added": amount, "coins": coins}
 
+@app.get("/version")
+def version():
+    return {"version": "v2", "commit": "57be39d"}
+
