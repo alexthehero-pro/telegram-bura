@@ -1,5 +1,11 @@
 const tg = window.Telegram?.WebApp;
 if (tg) tg.expand();
+function $(id) { return document.getElementById(id); }
+
+function setText(id, text) {
+  const el = $(id);
+  if (el) el.textContent = text;
+}
 
 // API на том же домене (Render)
 const API_BASE = "";
@@ -82,7 +88,7 @@ function clearTable() {
   document.getElementById("botCard").textContent = "—";
 }
 function renderScore() {
-  document.getElementById("score").textContent = `${myScore} : ${botScore}`;
+  document.getElementById("score").${botScore}`;
 }
 function renderHand() {
   const el = document.getElementById("hand");
@@ -99,7 +105,7 @@ function renderHand() {
 function newRound() {
   myScore = 0; botScore = 0;
   trumpSuit = suits[Math.floor(Math.random() * suits.length)];
-  document.getElementById("trump").textContent = trumpSuit;
+setText("trump", trumpSuit);
   hand = [randomCard(), randomCard(), randomCard()];
   renderHand();
   clearTable();
@@ -125,8 +131,8 @@ function playCard(idx) {
   const my = hand.splice(idx, 1)[0];
   const bot = randomCard();
 
-  document.getElementById("myCard").textContent = cardToText(my);
-  document.getElementById("botCard").textContent = cardToText(bot);
+  document.getElementById("myCard").;
+  document.getElementById("botCard").;
 
   const res = compareCards(my, bot);
   if (res >= 0) myScore += 1; else botScore += 1;
@@ -178,13 +184,20 @@ document.getElementById("newRoundBtn").addEventListener("click", newRound);
 setHello();
 
 const initData = tg?.initData || "";
-if (!initData) {
-  setInfo("Открой игру из Telegram (через бота), тогда появятся coins 🪙");
-} else {
+if (initData) {
   apiMe();
+} else {
+  // в браузере пусть не ругается
+  if (typeof setInfo === "function") {
+    setInfo("Открой игру из Telegram (через бота), тогда появятся coins 🪙");
+  }
 }
 
-newRound();
-
-setStatus("");
+// ИГРА ДОЛЖНА СТАРТОВАТЬ ВСЕГДА
+try {
+  newRound();
+} catch (e) {
+  alert("Ошибка запуска игры: " + e);
+  console.log(e);
+}
 
