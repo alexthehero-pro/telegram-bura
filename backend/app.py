@@ -90,5 +90,5 @@ def reward(payload: dict):
 
 @app.get("/version")
 def version():
-    return {"version": "v2", "commit": "57be39d"}
+    return {"version": "v3", "commit": "AUTO_REWARD"}
 
