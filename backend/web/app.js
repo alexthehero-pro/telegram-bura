@@ -12,8 +12,10 @@ function setHello() {
     document.getElementById("hello").textContent = "Открыто не из Telegram (это ок).";
   }
 }
-function setInfo(text) {
-  document.getElementById("info").textContent = text;
+function setStatus(text) {
+  const el = document.getElementById("status");
+  if (el) el.textContent = text;
+}
 }
 
 async function apiMe() {
@@ -183,4 +185,6 @@ if (!initData) {
 }
 
 newRound();
+
+setStatus("");
 
