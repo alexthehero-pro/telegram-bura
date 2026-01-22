@@ -138,11 +138,20 @@ if (hand.length === 0) {
     alert(win ? "Ты выиграл раунд! 🏆 (+5 монет)" : "Бот выиграл раунд 🤖");
 
     if (win) {
-      const r = await rewardWin(5);
-      if (r?.ok) {
-        setInfo(`id: ${tg?.initDataUnsafe?.user?.id || "?"} | coins: ${r.coins}`);
-      } else {
-        // если вдруг не получилось — просто обновим через /api/me
+      try {
+        const initData = tg?.initData || "";
+        const res = await fetch(`/api/reward`, {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ initData, amount: 5 })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          setInfo(`id: ${tg?.initDataUnsafe?.user?.id || "?"} | coins: ${data.coins}`);
+        } else {
+          await apiMe();
+        }
+      } catch (e) {
         await apiMe();
       }
     }

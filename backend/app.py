@@ -75,11 +75,10 @@ def reward(payload: dict):
 
     tg_id = int(user["id"])
 
-    # сколько начислять (ограничим, чтобы нельзя было накрутить)
     try:
-        amount = int(payload.get("amount", 10))
+        amount = int(payload.get("amount", 5))
     except Exception:
-        amount = 10
+        amount = 5
 
     if amount < 1:
         amount = 1
